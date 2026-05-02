@@ -570,6 +570,15 @@
       const c = cards[(i + cards.length) % cards.length];
       ['front','back'].forEach(side => { const img = new Image(); img.decoding = 'async'; img.src = c[side]; });
     }
+    function scrollThumbIntoView(index) {
+      const active = thumbs.children[index];
+      if (!active) return;
+      const maxLeft = Math.max(0, thumbs.scrollWidth - thumbs.clientWidth);
+      const maxTop = Math.max(0, thumbs.scrollHeight - thumbs.clientHeight);
+      const left = clamp(active.offsetLeft - (thumbs.clientWidth - active.offsetWidth) / 2, 0, maxLeft);
+      const top = clamp(active.offsetTop - (thumbs.clientHeight - active.offsetHeight) / 2, 0, maxTop);
+      thumbs.scrollTo({ left, top, behavior: 'smooth' });
+    }
     function loadCard(i, scrollThumb=true) {
       state.index = (i + cards.length) % cards.length;
       const c = cards[state.index];
@@ -581,7 +590,7 @@
       if (frontAsset) { frontAsset.href = c.front; frontAsset.download = c.filename + '_front.webp'; }
       if (backAsset) { backAsset.href = c.back; backAsset.download = c.filename + '_back.webp'; }
       [...thumbs.children].forEach((el, idx) => el.classList.toggle('active', idx === state.index));
-      if (scrollThumb && thumbs.children[state.index]) thumbs.children[state.index].scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
+      if (scrollThumb) scrollThumbIntoView(state.index);
       statusText.textContent = `${c.id} selected: ${c.tactic}.`;
       preload(state.index + 1); preload(state.index - 1);
     }
