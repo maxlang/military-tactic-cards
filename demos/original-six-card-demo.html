@@ -1,0 +1,743 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0b1016" />
+  <title>Military Tactics Cards — Mobile 3D Demo</title>
+  <style>
+    :root {
+      --gold: #d4b66e;
+      --gold2: #f1dca8;
+      --ink: #f1ead9;
+      --muted: rgba(241,234,217,.70);
+      --panel: rgba(10,16,24,.76);
+      --line: rgba(241,220,168,.25);
+      --card-w: min(45vw, 462px);
+      --card-h: calc(var(--card-w) * 1.424);
+      --thick: 20px;
+      --z: calc(var(--thick) / 2);
+      --rx: -8deg;
+      --ry: 24deg;
+      --rz: 0deg;
+      --zoom: 1;
+      --glare: .40;
+      --shine-x: 63%;
+      --shine-y: 26%;
+      --shadow-x: 28px;
+      --shadow-y: 24px;
+      --shadow-blur: 42px;
+      --front-img: none;
+      --back-img: none;
+      color-scheme: dark;
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    html { min-height: 100%; }
+    body {
+      margin: 0;
+      min-height: 100svh;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 16% 8%, rgba(212,182,110,.22), transparent 32%),
+        radial-gradient(circle at 88% 12%, rgba(56,111,151,.25), transparent 34%),
+        radial-gradient(circle at 50% 108%, rgba(139,45,37,.20), transparent 38%),
+        linear-gradient(135deg, #06090e, #111a24 47%, #070b10);
+      overflow-x: hidden;
+      -webkit-text-size-adjust: 100%;
+      -webkit-tap-highlight-color: transparent;
+      overscroll-behavior-y: contain;
+    }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(255,255,255,.024) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.020) 1px, transparent 1px);
+      background-size: 52px 52px;
+      mask-image: radial-gradient(circle at 50% 35%, black, transparent 76%);
+    }
+    .app {
+      min-height: 100svh;
+      width: min(1460px, 100%);
+      margin: 0 auto;
+      padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(18px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+      display: grid;
+      grid-template-columns: minmax(260px, 350px) minmax(0, 1fr) minmax(260px, 350px);
+      grid-template-rows: auto minmax(0, 1fr);
+      gap: 16px;
+      position: relative;
+      z-index: 1;
+    }
+    .topbar, .panel, .stagePanel {
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(255,255,255,.075), rgba(255,255,255,.032));
+      box-shadow: 0 24px 90px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.12);
+      backdrop-filter: blur(15px);
+    }
+    .topbar {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 14px 16px;
+      border-radius: 22px;
+    }
+    .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .mark {
+      width: 44px; height: 44px; border-radius: 14px;
+      display: grid; place-items: center;
+      color: var(--gold2);
+      border: 1px solid rgba(241,220,168,.40);
+      background: linear-gradient(145deg, #092033, #10141b);
+      font-weight: 900; letter-spacing: .06em;
+      flex: 0 0 auto;
+    }
+    h1 { margin: 0; font-size: clamp(18px, 2vw, 25px); line-height: 1.05; letter-spacing: .01em; }
+    .subtitle { color: var(--muted); font-size: 13px; margin-top: 4px; line-height: 1.35; }
+    .chips { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+    .chip {
+      font-size: 12px; padding: 7px 10px; border-radius: 999px;
+      color: rgba(241,234,217,.82); border: 1px solid rgba(241,220,168,.20);
+      background: rgba(0,0,0,.18); white-space: nowrap;
+    }
+    .leftPanel { grid-column: 1; }
+    .stagePanel { grid-column: 2; overflow: hidden; border-radius: 30px; display: grid; grid-template-rows: auto 1fr auto; min-height: 720px; position: relative; }
+    .rightPanel { grid-column: 3; }
+    .panel { border-radius: 26px; padding: 16px; min-height: 0; }
+    .sideStack { display: flex; flex-direction: column; gap: 14px; min-height: 0; }
+    .section {
+      border: 1px solid rgba(241,220,168,.15);
+      border-radius: 20px;
+      background: rgba(0,0,0,.15);
+      padding: 14px;
+    }
+    .section h2 { margin: 0 0 12px; color: var(--gold2); font-size: 12px; letter-spacing: .14em; text-transform: uppercase; }
+    .stageTop {
+      display: none;
+      padding: 10px;
+      border-bottom: 1px solid rgba(241,220,168,.15);
+      background: rgba(0,0,0,.14);
+    }
+    .stage {
+      position: relative;
+      display: grid;
+      place-items: center;
+      min-height: 610px;
+      perspective: 1500px;
+      overflow: hidden;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+      cursor: grab;
+    }
+    .stage.dragging { cursor: grabbing; }
+    .stage::before {
+      content: "";
+      position: absolute; inset: 0;
+      background:
+        radial-gradient(circle at 52% 12%, rgba(255,246,220,.27), transparent 32%),
+        radial-gradient(circle at 50% 50%, rgba(255,255,255,.08), transparent 33%),
+        linear-gradient(180deg, rgba(255,255,255,.04), transparent 58%);
+      pointer-events: none;
+    }
+    .floor {
+      position: absolute; left: 50%; bottom: 5%;
+      width: min(760px, 80%); height: 210px;
+      transform: translateX(-50%) rotateX(70deg);
+      border-radius: 50%;
+      background: radial-gradient(ellipse at 50% 50%, rgba(232,215,180,.20), transparent 64%);
+      filter: blur(5px); pointer-events: none;
+    }
+    .shadow {
+      position: absolute;
+      left: 50%; top: calc(50% + var(--card-h) * .45);
+      width: calc(var(--card-w) * 1.05); height: calc(var(--card-h) * .18);
+      border-radius: 50%;
+      transform: translate(calc(-50% + var(--shadow-x)), var(--shadow-y)) scale(calc(var(--zoom) * 1.08));
+      background: radial-gradient(ellipse at 50% 50%, rgba(0,0,0,.62), rgba(0,0,0,.22) 47%, transparent 74%);
+      filter: blur(var(--shadow-blur)); opacity: .72; pointer-events: none;
+    }
+    .card3d {
+      width: var(--card-w); height: var(--card-h);
+      position: relative;
+      transform-style: preserve-3d;
+      -webkit-transform-style: preserve-3d;
+      transform: translate3d(0,0,0) scale(var(--zoom)) rotateX(var(--rx)) rotateY(var(--ry)) rotateZ(var(--rz));
+      transition: transform .14s cubic-bezier(.2,.8,.2,1);
+      will-change: transform;
+    }
+    .dragging .card3d, .spinOn .card3d, .card3d.spinOn { transition: none; }
+    .face {
+      position: absolute; inset: 0;
+      border-radius: 22px;
+      overflow: hidden;
+      background-color: #efe4cc;
+      background-size: cover;
+      background-position: center;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+      transform-style: preserve-3d;
+      -webkit-transform-style: preserve-3d;
+      border: 1px solid rgba(255,255,255,.30);
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,.38), inset 0 0 36px rgba(0,0,0,.12);
+    }
+    .front { background-image: var(--front-img); transform: translateZ(var(--z)); }
+    .back { background-image: var(--back-img); transform: rotateY(180deg) translateZ(var(--z)); }
+    .glare {
+      position: absolute; inset: 0; pointer-events: none;
+      background:
+        radial-gradient(circle at var(--shine-x) var(--shine-y), rgba(255,255,255,.42), transparent 18%),
+        linear-gradient(116deg, transparent 36%, rgba(255,255,255,.20) 48%, rgba(255,255,255,.06) 53%, transparent 66%);
+      mix-blend-mode: screen; opacity: var(--glare);
+    }
+    .cornerLight {
+      position: absolute; inset: 0; pointer-events: none;
+      background: linear-gradient(135deg, rgba(255,238,185,.35), transparent 16%), linear-gradient(315deg, rgba(0,0,0,.20), transparent 22%);
+      opacity: .36;
+    }
+    .edge {
+      position: absolute;
+      transform-style: preserve-3d;
+      -webkit-transform-style: preserve-3d;
+      background:
+        linear-gradient(90deg, #0c1219, #29303a 28%, #c4a25d 50%, #29303a 72%, #0c1219),
+        repeating-linear-gradient(0deg, rgba(255,255,255,.06) 0 1px, transparent 1px 5px);
+      opacity: .93;
+      box-shadow: inset 0 0 10px rgba(0,0,0,.55);
+    }
+    .edge.top, .edge.bottom { left: 18px; width: calc(100% - 36px); height: var(--thick); }
+    .edge.top { top: calc(var(--thick) / -2); transform: rotateX(90deg) translateZ(var(--z)); transform-origin: bottom; border-radius: 10px 10px 0 0; }
+    .edge.bottom { bottom: calc(var(--thick) / -2); transform: rotateX(-90deg) translateZ(var(--z)); transform-origin: top; border-radius: 0 0 10px 10px; }
+    .edge.left, .edge.right { top: 18px; height: calc(100% - 36px); width: var(--thick); background: linear-gradient(180deg, #0c1219, #29303a 28%, #c4a25d 50%, #29303a 72%, #0c1219); }
+    .edge.left { left: calc(var(--thick) / -2); transform: rotateY(-90deg) translateZ(var(--z)); transform-origin: right; border-radius: 10px 0 0 10px; }
+    .edge.right { right: calc(var(--thick) / -2); transform: rotateY(90deg) translateZ(var(--z)); transform-origin: left; border-radius: 0 10px 10px 0; }
+    .edgeGlow {
+      position: absolute; inset: -2px; border-radius: 24px;
+      transform: translateZ(calc(var(--z) + 2px));
+      border: 1px solid rgba(241,220,168,.32);
+      box-shadow: 0 0 32px rgba(212,182,110,.22);
+      pointer-events: none;
+    }
+    .guide { display: none; position: absolute; pointer-events: none; border-radius: 16px; }
+    .showGuides .guide.safe { display: block; inset: 40px; border: 1.5px dashed rgba(30,108,165,.76); box-shadow: 0 0 0 1px rgba(255,255,255,.18); }
+    .showGuides .guide.bleed { display: block; inset: 14px; border: 1.5px dashed rgba(174,46,40,.68); }
+    .stageFooter {
+      position: relative;
+      padding: 14px 16px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 12px; align-items: center;
+      border-top: 1px solid rgba(241,220,168,.15);
+      background: rgba(0,0,0,.18);
+    }
+    .cardTitle { font-weight: 850; font-size: 17px; line-height: 1.2; }
+    .cardMeta { margin-top: 4px; color: var(--muted); font-size: 13px; line-height: 1.35; }
+    .badgeRow { display: flex; gap: 7px; flex-wrap: wrap; justify-content: flex-end; }
+    .miniBadge {
+      font-size: 12px; padding: 7px 9px; border-radius: 999px;
+      border: 1px solid rgba(241,220,168,.22); background: rgba(0,0,0,.20); color: rgba(241,234,217,.82); white-space: nowrap;
+    }
+    select, button, input { font: inherit; }
+    select {
+      width: 100%; min-height: 44px;
+      color: #fff5df;
+      background: linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.035));
+      border: 1px solid rgba(241,220,168,.26);
+      border-radius: 14px;
+      padding: 11px 38px 11px 12px;
+      outline: none;
+      appearance: none;
+    }
+    .selectWrap { position: relative; }
+    .selectWrap::after { content: "▾"; position: absolute; right: 13px; top: 50%; transform: translateY(-50%); color: var(--gold2); pointer-events: none; }
+    button {
+      min-height: 44px;
+      color: #fff4dd;
+      background: linear-gradient(180deg, rgba(255,255,255,.105), rgba(255,255,255,.038));
+      border: 1px solid rgba(241,220,168,.26);
+      border-radius: 14px;
+      padding: 10px 11px;
+      cursor: pointer;
+      box-shadow: 0 7px 18px rgba(0,0,0,.18), inset 0 1px 0 rgba(255,255,255,.11);
+    }
+    button.primary { background: linear-gradient(180deg, rgba(212,182,110,.38), rgba(212,182,110,.12)); border-color: rgba(241,220,168,.42); }
+    button.active { border-color: rgba(121,197,255,.70); box-shadow: 0 0 0 2px rgba(68,159,225,.17), inset 0 1px 0 rgba(255,255,255,.11); }
+    .buttons { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; margin-top: 12px; }
+    .mobileQuick { display: none; grid-template-columns: repeat(4, 1fr); gap: 8px; padding: 10px; border-top: 1px solid rgba(241,220,168,.14); background: rgba(0,0,0,.22); }
+    .mobileQuick button { min-height: 46px; padding: 9px 8px; }
+    .rangeGrid { display: grid; gap: 12px; }
+    .rangeLine { display: grid; grid-template-columns: 86px 1fr 46px; align-items: center; gap: 9px; }
+    label { color: rgba(241,234,217,.80); font-size: 13px; }
+    input[type="range"] { width: 100%; accent-color: #d4b66e; }
+    .val { color: rgba(241,234,217,.58); font-size: 12px; text-align: right; font-variant-numeric: tabular-nums; }
+    .toggle { display: flex; align-items: flex-start; gap: 9px; margin: 9px 0; color: rgba(241,234,217,.78); font-size: 13px; line-height: 1.35; }
+    .toggle input { margin-top: 2px; accent-color: #d4b66e; }
+    .hint { color: rgba(241,234,217,.60); font-size: 12px; line-height: 1.45; }
+    .thumbs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; }
+    .thumb {
+      position: relative; aspect-ratio: 5 / 7; border-radius: 13px; overflow: hidden;
+      padding: 0; min-height: auto; border: 1px solid rgba(241,220,168,.20); background: #111820;
+      opacity: .72; box-shadow: none;
+    }
+    .thumb.active { opacity: 1; border-color: rgba(241,220,168,.72); box-shadow: 0 0 0 2px rgba(212,182,110,.15); }
+    .thumb img { width: 100%; height: 100%; display: block; object-fit: cover; }
+    .thumb span {
+      position: absolute; left: 6px; bottom: 6px; padding: 4px 7px; border-radius: 999px;
+      background: rgba(0,0,0,.62); border: 1px solid rgba(255,255,255,.15); color: #fff4dd; font-weight: 800; font-size: 10px;
+    }
+    .checklist { display: grid; gap: 10px; }
+    .checkItem { display: grid; grid-template-columns: 22px 1fr; gap: 9px; color: rgba(241,234,217,.70); font-size: 12.5px; line-height: 1.4; }
+    .checkItem b { color: #fff4dd; }
+    .checkIcon { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: linear-gradient(180deg, var(--gold2), var(--gold)); color: #101820; font-size: 12px; font-weight: 950; }
+    .assetLinks { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+    .assetLink {
+      display: block; text-align: center; text-decoration: none; color: #fff4dd;
+      border: 1px solid rgba(241,220,168,.24); border-radius: 12px; padding: 10px 8px; background: rgba(255,255,255,.045); font-size: 12px;
+    }
+    .kbd { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 10px; color: rgba(241,234,217,.62); font-size: 12px; }
+    .kbd code { color: #fff4dd; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.10); padding: 2px 6px; border-radius: 6px; }
+    .status { color: rgba(241,234,217,.62); font-size: 12px; margin-top: 10px; }
+    body.light {
+      color: #121820;
+      background: radial-gradient(circle at 42% 12%, rgba(255,250,235,.82), transparent 34%), linear-gradient(135deg, #f2ece0, #d5c8ad 58%, #ab9b7c);
+    }
+    body.light .topbar, body.light .panel, body.light .stagePanel { color: #111820; background: linear-gradient(180deg, rgba(255,255,255,.72), rgba(255,255,255,.38)); border-color: rgba(39,31,20,.18); }
+    body.light .subtitle, body.light .hint, body.light .cardMeta, body.light label, body.light .checkItem, body.light .kbd, body.light .status { color: rgba(15,22,30,.68); }
+    body.light .section { background: rgba(255,255,255,.42); border-color: rgba(39,31,20,.16); }
+    body.light button, body.light select, body.light .assetLink { color: #111820; background: linear-gradient(180deg, rgba(255,255,255,.88), rgba(255,255,255,.52)); border-color: rgba(48,40,28,.20); }
+    body.light .chip, body.light .miniBadge { color: #1a2430; background: rgba(255,255,255,.55); border-color: rgba(48,40,28,.18); }
+
+    @media (max-width: 1180px) {
+      .app { grid-template-columns: minmax(260px, 330px) minmax(0, 1fr); }
+      .rightPanel { grid-column: 1 / -1; }
+      .rightPanel.sideStack { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      :root { --card-w: min(56vw, 430px); }
+    }
+    @media (max-width: 820px) {
+      :root { --card-w: min(82vw, 340px); --thick: 13px; --glare: .34; }
+      body { overscroll-behavior-y: auto; }
+      .app {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        min-height: 100svh;
+        padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+      }
+      .topbar { padding: 10px; border-radius: 18px; align-items: flex-start; }
+      .mark { width: 38px; height: 38px; border-radius: 12px; font-size: 13px; }
+      h1 { font-size: 18px; }
+      .subtitle { font-size: 12px; }
+      .chips { display: none; }
+      .stagePanel { order: 1; min-height: 0; border-radius: 22px; display: grid; grid-template-rows: auto minmax(0, 1fr) auto auto; }
+      .leftPanel { order: 2; }
+      .rightPanel { order: 3; }
+      .panel { border-radius: 20px; padding: 11px; }
+      .stageTop { display: block; }
+      .stage { min-height: 0; height: min(58svh, 520px); perspective: 1000px; }
+      .floor { height: 150px; bottom: 2%; filter: blur(4px); }
+      .shadow { opacity: .56; }
+      .face { border-radius: 17px; }
+      .edge.top, .edge.bottom { left: 12px; width: calc(100% - 24px); }
+      .edge.left, .edge.right { top: 12px; height: calc(100% - 24px); }
+      .edgeGlow { border-radius: 18px; }
+      .showGuides .guide.safe { inset: 28px; }
+      .showGuides .guide.bleed { inset: 10px; }
+      .stageFooter { grid-template-columns: 1fr; padding: 10px; }
+      .cardTitle { font-size: 15px; }
+      .cardMeta { font-size: 12px; }
+      .badgeRow { justify-content: flex-start; }
+      .miniBadge { font-size: 11px; padding: 6px 8px; }
+      .mobileQuick { display: grid; }
+      .sideStack { gap: 10px; }
+      .buttons { grid-template-columns: repeat(2, 1fr); }
+      .rightPanel.sideStack { display: flex; }
+      .rangeLine { grid-template-columns: 72px 1fr 42px; }
+      .thumbs { display: flex; overflow-x: auto; gap: 9px; padding-bottom: 2px; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; }
+      .thumb { flex: 0 0 74px; scroll-snap-align: center; }
+      .section { padding: 12px; border-radius: 18px; }
+      .section h2 { font-size: 11px; margin-bottom: 10px; }
+      button, select { min-height: 46px; }
+      .desktopOnly { display: none; }
+      .topbar, .panel, .stagePanel { backdrop-filter: none; }
+    }
+    @media (max-width: 380px) {
+      :root { --card-w: min(84vw, 305px); }
+      .stage { height: 54svh; min-height: 390px; }
+      .mobileQuick button { font-size: 12px; padding-left: 4px; padding-right: 4px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .card3d { transition: none; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="mark">3D</div>
+        <div>
+          <h1>Military Tactics Card Deck</h1>
+          <div class="subtitle">Mobile-friendly 3D mockup. One-finger drag rotates, tap flips, pinch zooms.</div>
+        </div>
+      </div>
+      <div class="chips">
+        <span class="chip">mobile patched</span>
+        <span class="chip">tap + pinch</span>
+        <span class="chip">6 paired cards</span>
+        <span class="chip">self-contained</span>
+      </div>
+    </header>
+
+    <aside class="leftPanel sideStack">
+      <section class="panel section">
+        <h2>Pick a card</h2>
+        <div class="selectWrap"><select id="cardSelect" aria-label="Pick a card"></select></div>
+        <div class="buttons">
+          <button id="prevBtn">← Previous</button>
+          <button id="nextBtn">Next →</button>
+          <button class="primary" id="flipBtn">Flip</button>
+          <button id="spinBtn">Auto-spin</button>
+          <button id="frontBtn">Front</button>
+          <button id="backBtn">Back</button>
+          <button id="heroBtn">Hero angle</button>
+          <button id="resetBtn">Reset</button>
+        </div>
+        <div class="status" id="statusText">Ready.</div>
+      </section>
+
+      <section class="panel section">
+        <h2>Thumbnail rail</h2>
+        <div class="thumbs" id="thumbs" aria-label="Card thumbnails"></div>
+      </section>
+    </aside>
+
+    <section class="stagePanel">
+      <div class="stageTop">
+        <div class="hint">One-finger drag to rotate · tap the card to flip · pinch to zoom</div>
+      </div>
+      <div class="stage" id="stage" aria-label="3D card stage. Drag to rotate, tap to flip, pinch to zoom.">
+        <div class="floor"></div>
+        <div class="shadow"></div>
+        <div class="card3d" id="card3d">
+          <div class="edge top"></div>
+          <div class="edge bottom"></div>
+          <div class="edge left"></div>
+          <div class="edge right"></div>
+          <div class="face front"><div class="cornerLight"></div><div class="glare"></div><div class="guide bleed"></div><div class="guide safe"></div></div>
+          <div class="face back"><div class="cornerLight"></div><div class="glare"></div><div class="guide bleed"></div><div class="guide safe"></div></div>
+          <div class="edgeGlow"></div>
+        </div>
+      </div>
+      <footer class="stageFooter">
+        <div>
+          <div class="cardTitle" id="cardTitle">Double Envelopment / Battle of Cannae</div>
+          <div class="cardMeta" id="cardMeta">Card 01 • Maneuver</div>
+        </div>
+        <div class="badgeRow">
+          <span class="miniBadge" id="faceBadge">front visible</span>
+          <span class="miniBadge" id="angleBadge">x −8° · y 24°</span>
+          <span class="miniBadge" id="zoomBadge">100%</span>
+        </div>
+      </footer>
+      <div class="mobileQuick">
+        <button id="mPrev">←</button>
+        <button class="primary" id="mFlip">Flip</button>
+        <button id="mSpin">Spin</button>
+        <button id="mNext">→</button>
+      </div>
+    </section>
+
+    <aside class="rightPanel sideStack">
+      <section class="panel section">
+        <h2>Camera & lighting</h2>
+        <div class="rangeGrid">
+          <div class="rangeLine"><label for="rotX">Tilt</label><input type="range" id="rotX" min="-70" max="70" value="-8"><span class="val" id="rotXVal">-8°</span></div>
+          <div class="rangeLine"><label for="rotY">Spin</label><input type="range" id="rotY" min="-180" max="180" value="24"><span class="val" id="rotYVal">24°</span></div>
+          <div class="rangeLine"><label for="zoom">Zoom</label><input type="range" id="zoom" min="72" max="145" value="100"><span class="val" id="zoomVal">100%</span></div>
+          <div class="rangeLine"><label for="thick">Edge</label><input type="range" id="thick" min="8" max="34" value="20"><span class="val" id="thickVal">20px</span></div>
+          <div class="rangeLine"><label for="glare">Glare</label><input type="range" id="glare" min="0" max="75" value="40"><span class="val" id="glareVal">40%</span></div>
+        </div>
+        <label class="toggle"><input type="checkbox" id="guides"> <span>Show bleed and safe-area guides</span></label>
+        <label class="toggle"><input type="checkbox" id="studio"> <span>Light studio background</span></label>
+        <p class="hint">On mobile, the stage uses touch-only capture, not page-wide capture, so the rest of the page still scrolls normally.</p>
+      </section>
+
+      <section class="panel section">
+        <h2>Included details people forget</h2>
+        <div class="checklist">
+          <div class="checkItem"><span class="checkIcon">✓</span><span><b>Mobile gestures.</b> Tap to flip, pinch to zoom, and one-finger rotate work without tiny controls.</span></div>
+          <div class="checkItem"><span class="checkIcon">✓</span><span><b>Safe/bleed review.</b> Toggle guides before sending card art to print or changing the trim.</span></div>
+          <div class="checkItem"><span class="checkIcon">✓</span><span><b>Matched pairs.</b> The selector swaps tactic front and battle back together.</span></div>
+          <div class="checkItem"><span class="checkIcon">✓</span><span><b>Physical mockup.</b> Rounded corners, beveled edge, thickness, glare, and floor shadow make it feel like a real card.</span></div>
+          <div class="checkItem"><span class="checkIcon">✓</span><span><b>Performance.</b> Images are cropped, resized, and encoded as WebP for mobile load times.</span></div>
+        </div>
+      </section>
+
+      <section class="panel section desktopOnly">
+        <h2>Current assets</h2>
+        <div class="hint">The standalone HTML embeds optimized versions of each face. These links download the current displayed pair.</div>
+        <div class="assetLinks">
+          <a class="assetLink" id="frontAsset" download>Front image</a>
+          <a class="assetLink" id="backAsset" download>Back image</a>
+        </div>
+      </section>
+
+      <section class="panel section desktopOnly">
+        <h2>Keyboard</h2>
+        <div class="kbd">
+          <span><code>←</code>/<code>→</code> card</span><span><code>F</code> flip</span>
+          <span><code>Space</code> spin</span><span><code>R</code> reset</span>
+          <span><code>1</code> front</span><span><code>2</code> back</span>
+        </div>
+      </section>
+    </aside>
+  </main>
+
+  <script>
+    const cards = [{"id": "01", "tactic": "Double Envelopment", "case": "Battle of Cannae", "suit": "Maneuver", "lesson": "Fix the center, close both flanks, and convert pressure into encirclement.", "frontLabel": "Classic example: Cannae, 216 BCE", "backLabel": "216 BCE • Second Punic War • Hannibal vs. Rome", "filename": "01_double_envelopment_cannae", "frontAsset": "assets/01_double_envelopment_cannae_front.webp", "front": "assets/01_double_envelopment_cannae_front.webp", "backAsset": "assets/01_double_envelopment_cannae_back.webp", "back": "assets/01_double_envelopment_cannae_back.webp"}, {"id": "02", "tactic": "Flanking Attack", "case": "Battle of Rossbach", "suit": "Maneuver", "lesson": "Pin the front, strike the exposed side, and roll the line inward.", "frontLabel": "Classic example: Rossbach, 1757", "backLabel": "1757 • Seven Years’ War • Frederick the Great vs. Franco-Imperial Army", "filename": "02_flanking_attack_rossbach", "frontAsset": "assets/02_flanking_attack_rossbach_front.webp", "front": "assets/02_flanking_attack_rossbach_front.webp", "backAsset": "assets/02_flanking_attack_rossbach_back.webp", "back": "assets/02_flanking_attack_rossbach_back.webp"}, {"id": "03", "tactic": "Single Envelopment", "case": "Battle of Chancellorsville", "suit": "Maneuver", "lesson": "Turn one flank while the center keeps the enemy fixed.", "frontLabel": "Classic example: Chancellorsville, 1863", "backLabel": "1863 • American Civil War • Lee & Jackson vs. Hooker", "filename": "03_single_envelopment_chancellorsville", "frontAsset": "assets/03_single_envelopment_chancellorsville_front.webp", "front": "assets/03_single_envelopment_chancellorsville_front.webp", "backAsset": "assets/03_single_envelopment_chancellorsville_back.webp", "back": "assets/03_single_envelopment_chancellorsville_back.webp"}, {"id": "04", "tactic": "Oblique Order", "case": "Battle of Leuthen", "suit": "Maneuver", "lesson": "Refuse one wing and mass power against one enemy side.", "frontLabel": "Classic example: Leuthen, 1757", "backLabel": "1757 • Seven Years’ War • Frederick the Great vs. Austria", "filename": "04_oblique_order_leuthen", "frontAsset": "assets/04_oblique_order_leuthen_front.webp", "front": "assets/04_oblique_order_leuthen_front.webp", "backAsset": "assets/04_oblique_order_leuthen_back.webp", "back": "assets/04_oblique_order_leuthen_back.webp"}, {"id": "05", "tactic": "Defense in Depth", "case": "Battle of Kursk", "suit": "Defense", "lesson": "Layer obstacles, fires, and reserves to blunt momentum.", "frontLabel": "Classic example: Kursk, 1943", "backLabel": "1943 • Eastern Front • Germany vs. the Soviet Union", "filename": "05_defense_in_depth_kursk", "frontAsset": "assets/05_defense_in_depth_kursk_front.webp", "front": "assets/05_defense_in_depth_kursk_front.webp", "backAsset": "assets/05_defense_in_depth_kursk_back.webp", "back": "assets/05_defense_in_depth_kursk_back.webp"}, {"id": "06", "tactic": "Feigned Retreat", "case": "Battle of Hastings", "suit": "Deception", "lesson": "Withdraw in order, draw pursuit, then reverse at overextension.", "frontLabel": "Classic example: Hastings, 1066", "backLabel": "1066 • Norman Conquest • William vs. Harold", "filename": "06_feigned_retreat_hastings", "frontAsset": "assets/06_feigned_retreat_hastings_front.webp", "front": "assets/06_feigned_retreat_hastings_front.webp", "backAsset": "assets/06_feigned_retreat_hastings_back.webp", "back": "assets/06_feigned_retreat_hastings_back.webp"}];
+    const root = document.documentElement;
+    const body = document.body;
+    const stage = document.getElementById('stage');
+    const card3d = document.getElementById('card3d');
+    const select = document.getElementById('cardSelect');
+    const thumbs = document.getElementById('thumbs');
+    const title = document.getElementById('cardTitle');
+    const meta = document.getElementById('cardMeta');
+    const faceBadge = document.getElementById('faceBadge');
+    const angleBadge = document.getElementById('angleBadge');
+    const zoomBadge = document.getElementById('zoomBadge');
+    const statusText = document.getElementById('statusText');
+    const frontAsset = document.getElementById('frontAsset');
+    const backAsset = document.getElementById('backAsset');
+    const controls = {
+      rotX: document.getElementById('rotX'), rotY: document.getElementById('rotY'), zoom: document.getElementById('zoom'),
+      thick: document.getElementById('thick'), glare: document.getElementById('glare')
+    };
+    const vals = {
+      rotX: document.getElementById('rotXVal'), rotY: document.getElementById('rotYVal'), zoom: document.getElementById('zoomVal'),
+      thick: document.getElementById('thickVal'), glare: document.getElementById('glareVal')
+    };
+    const state = { index: 0, rx: -8, ry: 24, rz: 0, zoom: 1, thick: 20, glare: .40, spinning: false, lastTs: 0 };
+    const pointers = new Map();
+    let dragStart = null;
+    let pinch = null;
+    let moved = false;
+
+    function clamp(n, min, max) { return Math.max(min, Math.min(max, n)); }
+    function normDeg(d) { return ((((d + 180) % 360) + 360) % 360) - 180; }
+    function dist(a,b) { return Math.hypot(a.x - b.x, a.y - b.y); }
+    function sideVisible() { const y = ((state.ry % 360) + 360) % 360; return (y > 90 && y < 270) ? 'back visible' : 'front visible'; }
+    function updateVars() {
+      const ry = state.ry * Math.PI / 180;
+      const rx = state.rx * Math.PI / 180;
+      root.style.setProperty('--rx', state.rx.toFixed(2) + 'deg');
+      root.style.setProperty('--ry', state.ry.toFixed(2) + 'deg');
+      root.style.setProperty('--rz', state.rz.toFixed(2) + 'deg');
+      root.style.setProperty('--zoom', state.zoom.toFixed(3));
+      root.style.setProperty('--thick', Math.round(state.thick) + 'px');
+      root.style.setProperty('--z', Math.round(state.thick / 2) + 'px');
+      root.style.setProperty('--glare', state.glare.toFixed(2));
+      root.style.setProperty('--shine-x', (50 + Math.sin(ry) * 34).toFixed(1) + '%');
+      root.style.setProperty('--shine-y', (30 + Math.sin(rx) * 18).toFixed(1) + '%');
+      root.style.setProperty('--shadow-x', (Math.sin(ry) * 52).toFixed(1) + 'px');
+      root.style.setProperty('--shadow-y', (24 + Math.abs(Math.sin(rx)) * 16).toFixed(1) + 'px');
+      root.style.setProperty('--shadow-blur', (34 + Math.abs(Math.sin(ry)) * 22).toFixed(1) + 'px');
+      controls.rotX.value = Math.round(state.rx);
+      controls.rotY.value = Math.round(normDeg(state.ry));
+      controls.zoom.value = Math.round(state.zoom * 100);
+      controls.thick.value = Math.round(state.thick);
+      controls.glare.value = Math.round(state.glare * 100);
+      vals.rotX.textContent = Math.round(state.rx) + '°';
+      vals.rotY.textContent = Math.round(normDeg(state.ry)) + '°';
+      vals.zoom.textContent = Math.round(state.zoom * 100) + '%';
+      vals.thick.textContent = Math.round(state.thick) + 'px';
+      vals.glare.textContent = Math.round(state.glare * 100) + '%';
+      faceBadge.textContent = sideVisible();
+      angleBadge.textContent = `x ${Math.round(state.rx)}° · y ${Math.round(normDeg(state.ry))}°`;
+      zoomBadge.textContent = Math.round(state.zoom * 100) + '%';
+      document.getElementById('spinBtn').classList.toggle('active', state.spinning);
+      document.getElementById('mSpin').classList.toggle('active', state.spinning);
+      card3d.classList.toggle('spinOn', state.spinning);
+    }
+    function preload(i) {
+      const c = cards[(i + cards.length) % cards.length];
+      ['front','back'].forEach(side => { const img = new Image(); img.decoding = 'async'; img.src = c[side]; });
+    }
+    function loadCard(i, scrollThumb=true) {
+      state.index = (i + cards.length) % cards.length;
+      const c = cards[state.index];
+      root.style.setProperty('--front-img', `url("${c.front}")`);
+      root.style.setProperty('--back-img', `url("${c.back}")`);
+      title.textContent = `${c.tactic} / ${c.case}`;
+      meta.textContent = `Card ${c.id} • ${c.suit} • ${c.lesson}`;
+      select.value = String(state.index);
+      if (frontAsset) { frontAsset.href = c.front; frontAsset.download = c.filename + '_front.webp'; }
+      if (backAsset) { backAsset.href = c.back; backAsset.download = c.filename + '_back.webp'; }
+      [...thumbs.children].forEach((el, idx) => el.classList.toggle('active', idx === state.index));
+      if (scrollThumb && thumbs.children[state.index]) thumbs.children[state.index].scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
+      statusText.textContent = `${c.id} selected: ${c.tactic}.`;
+      preload(state.index + 1); preload(state.index - 1);
+    }
+    function flip() { state.ry += 180; updateVars(); statusText.textContent = sideVisible() + '.'; }
+    function setFront() { state.rx = 0; state.ry = 0; updateVars(); }
+    function setBack() { state.rx = 0; state.ry = 180; updateVars(); }
+    function setHero() { state.rx = -8; state.ry = 24; state.zoom = 1; updateVars(); }
+    function reset() { state.rx = -8; state.ry = 24; state.rz = 0; state.zoom = 1; state.thick = 20; state.glare = .40; state.spinning = false; updateVars(); }
+    function toggleSpin() { state.spinning = !state.spinning; updateVars(); statusText.textContent = state.spinning ? 'Auto-spin on.' : 'Auto-spin off.'; }
+
+    function buildUI() {
+      cards.forEach((c, i) => {
+        const opt = document.createElement('option');
+        opt.value = String(i); opt.textContent = `${c.id} — ${c.tactic} / ${c.case}`;
+        select.appendChild(opt);
+        const btn = document.createElement('button');
+        btn.className = 'thumb'; btn.type = 'button'; btn.title = `${c.tactic} / ${c.case}`;
+        btn.innerHTML = `<img alt="${c.tactic} thumbnail" src="${c.front}"><span>${c.id}</span>`;
+        btn.addEventListener('click', () => loadCard(i));
+        thumbs.appendChild(btn);
+      });
+      loadCard(0, false); updateVars();
+    }
+
+    function pointerPoint(e) { return { x: e.clientX, y: e.clientY }; }
+    function startPointer(e) {
+      if (e.target.closest('button, select, input, a')) return;
+      e.preventDefault();
+      state.spinning = false;
+      pointers.set(e.pointerId, pointerPoint(e));
+      stage.classList.add('dragging');
+      try { stage.setPointerCapture(e.pointerId); } catch (_) {}
+      moved = false;
+      if (pointers.size === 1) {
+        dragStart = { x: e.clientX, y: e.clientY, rx: state.rx, ry: state.ry, t: performance.now() };
+      } else if (pointers.size === 2) {
+        const pts = [...pointers.values()];
+        pinch = { d: dist(pts[0], pts[1]), zoom: state.zoom };
+      }
+      updateVars();
+    }
+    function movePointer(e) {
+      if (!pointers.has(e.pointerId)) return;
+      e.preventDefault();
+      const prev = pointers.get(e.pointerId);
+      const curr = pointerPoint(e);
+      pointers.set(e.pointerId, curr);
+      if (pointers.size >= 2) {
+        const pts = [...pointers.values()];
+        if (!pinch) pinch = { d: dist(pts[0], pts[1]), zoom: state.zoom };
+        const nd = dist(pts[0], pts[1]);
+        if (pinch.d > 0) state.zoom = clamp(pinch.zoom * (nd / pinch.d), .72, 1.45);
+        moved = true;
+      } else if (dragStart) {
+        const dx = curr.x - dragStart.x;
+        const dy = curr.y - dragStart.y;
+        if (Math.abs(dx) + Math.abs(dy) > 6) moved = true;
+        state.ry = dragStart.ry + dx * 0.34;
+        state.rx = clamp(dragStart.rx - dy * 0.26, -70, 70);
+      }
+      updateVars();
+    }
+    function endPointer(e) {
+      const start = dragStart;
+      pointers.delete(e.pointerId);
+      try { stage.releasePointerCapture(e.pointerId); } catch (_) {}
+      if (!pointers.size) {
+        stage.classList.remove('dragging');
+        pinch = null;
+        if (start && !moved && performance.now() - start.t < 360) flip();
+        dragStart = null;
+      } else if (pointers.size === 1) {
+        const p = [...pointers.values()][0];
+        dragStart = { x: p.x, y: p.y, rx: state.rx, ry: state.ry, t: performance.now() };
+        pinch = null;
+      }
+      updateVars();
+    }
+    function setupTouchFallback() {
+      if ('PointerEvent' in window) return;
+      let start = null, pinchStart = null;
+      stage.addEventListener('touchstart', ev => {
+        if (ev.target.closest('button, select, input, a')) return;
+        ev.preventDefault(); state.spinning = false; stage.classList.add('dragging'); moved = false;
+        if (ev.touches.length === 1) { const t = ev.touches[0]; start = { x:t.clientX, y:t.clientY, rx:state.rx, ry:state.ry, t:performance.now() }; }
+        if (ev.touches.length >= 2) {
+          const a = ev.touches[0], b = ev.touches[1];
+          pinchStart = { d: Math.hypot(a.clientX-b.clientX, a.clientY-b.clientY), zoom: state.zoom };
+        }
+      }, { passive:false });
+      stage.addEventListener('touchmove', ev => {
+        ev.preventDefault();
+        if (ev.touches.length >= 2 && pinchStart) {
+          const a = ev.touches[0], b = ev.touches[1];
+          const d = Math.hypot(a.clientX-b.clientX, a.clientY-b.clientY);
+          state.zoom = clamp(pinchStart.zoom * (d / pinchStart.d), .72, 1.45); moved = true;
+        } else if (ev.touches.length === 1 && start) {
+          const t = ev.touches[0]; const dx = t.clientX - start.x; const dy = t.clientY - start.y;
+          if (Math.abs(dx) + Math.abs(dy) > 6) moved = true;
+          state.ry = start.ry + dx * .34; state.rx = clamp(start.rx - dy * .26, -70, 70);
+        }
+        updateVars();
+      }, { passive:false });
+      stage.addEventListener('touchend', ev => {
+        if (!ev.touches.length) {
+          stage.classList.remove('dragging');
+          if (start && !moved && performance.now() - start.t < 360) flip();
+          start = null; pinchStart = null;
+        }
+      });
+    }
+
+    select.addEventListener('change', e => loadCard(Number(e.target.value)));
+    document.getElementById('prevBtn').addEventListener('click', () => loadCard(state.index - 1));
+    document.getElementById('nextBtn').addEventListener('click', () => loadCard(state.index + 1));
+    document.getElementById('mPrev').addEventListener('click', () => loadCard(state.index - 1));
+    document.getElementById('mNext').addEventListener('click', () => loadCard(state.index + 1));
+    document.getElementById('flipBtn').addEventListener('click', flip);
+    document.getElementById('mFlip').addEventListener('click', flip);
+    document.getElementById('spinBtn').addEventListener('click', toggleSpin);
+    document.getElementById('mSpin').addEventListener('click', toggleSpin);
+    document.getElementById('frontBtn').addEventListener('click', setFront);
+    document.getElementById('backBtn').addEventListener('click', setBack);
+    document.getElementById('heroBtn').addEventListener('click', setHero);
+    document.getElementById('resetBtn').addEventListener('click', reset);
+    document.getElementById('guides').addEventListener('change', e => card3d.classList.toggle('showGuides', e.target.checked));
+    document.getElementById('studio').addEventListener('change', e => body.classList.toggle('light', e.target.checked));
+    controls.rotX.addEventListener('input', e => { state.rx = Number(e.target.value); updateVars(); });
+    controls.rotY.addEventListener('input', e => { state.ry = Number(e.target.value); updateVars(); });
+    controls.zoom.addEventListener('input', e => { state.zoom = Number(e.target.value) / 100; updateVars(); });
+    controls.thick.addEventListener('input', e => { state.thick = Number(e.target.value); updateVars(); });
+    controls.glare.addEventListener('input', e => { state.glare = Number(e.target.value) / 100; updateVars(); });
+    stage.addEventListener('pointerdown', startPointer, { passive: false });
+    stage.addEventListener('pointermove', movePointer, { passive: false });
+    stage.addEventListener('pointerup', endPointer);
+    stage.addEventListener('pointercancel', endPointer);
+    stage.addEventListener('lostpointercapture', e => { if (!pointers.size) stage.classList.remove('dragging'); });
+
+    window.addEventListener('keydown', e => {
+      if (e.target && ['INPUT','SELECT','TEXTAREA'].includes(e.target.tagName)) return;
+      if (e.key === 'ArrowLeft') loadCard(state.index - 1);
+      else if (e.key === 'ArrowRight') loadCard(state.index + 1);
+      else if (e.key.toLowerCase() === 'f') flip();
+      else if (e.key.toLowerCase() === 'r') reset();
+      else if (e.key === '1') setFront();
+      else if (e.key === '2') setBack();
+      else if (e.code === 'Space') { e.preventDefault(); toggleSpin(); }
+    });
+
+    function tick(ts) {
+      if (!state.lastTs) state.lastTs = ts;
+      const dt = Math.min(38, ts - state.lastTs);
+      state.lastTs = ts;
+      if (state.spinning && !pointers.size) { state.ry += dt * 0.030; updateVars(); }
+      requestAnimationFrame(tick);
+    }
+    buildUI(); setupTouchFallback(); requestAnimationFrame(tick);
+  </script>
+</body>
+</html>
